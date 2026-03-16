@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel do Produtor</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div>
+          <h1>Painel do Produtor</h1>
+          <p class="muted">Eventos, expositores, auditores e barracas.</p>
+        </div>
+        <div class="right">
+          <span id="producerName" class="pill"></span>
+          <a class="linkbtn" href="/ui/">Voltar</a>
+          <button id="btnLogout" class="secondary" style="max-width: 180px">Sair</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Eventos</h2>
+        <p class="muted" id="debugSession"></p>
+        <div class="row">
+          <label class="field">
+            <span>Novo evento (nome)</span>
+            <input id="eventName" placeholder="Nome do evento" />
+          </label>
+          <button id="btnCreateEvent" style="max-width: 220px">Criar evento</button>
+        </div>
+        <div class="row">
+          <label class="field">
+            <span>Evento selecionado</span>
+            <select id="eventSelect"></select>
+          </label>
+        </div>
+        <pre id="eventsOut" class="out"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Sistemas do evento selecionado</h2>
+        <p class="muted">
+          Escolha um sistema para gerenciar o evento selecionado acima.
+        </p>
+        <div class="row">
+          <button id="btnAuditSystem">Sistema de Auditoria de Barracas</button>
+          <button id="btnStockSystem" class="secondary">
+            Sistema de Controle de Estoque
+          </button>
+        </div>
+      </section>
+
+      <section class="card" id="auditSection">
+        <h2>Expositores</h2>
+        <div class="row">
+          <label class="field">
+            <span>Novo expositor (nome)</span>
+            <input id="exhibitorName" placeholder="Nome do expositor" />
+          </label>
+          <button id="btnCreateExhibitor" style="max-width: 220px">
+            Criar expositor
+          </button>
+        </div>
+        <div class="row">
+          <button id="btnLoadExhibitors" class="secondary" style="max-width: 220px">
+            Listar expositores
+          </button>
+        </div>
+        <pre id="exhibitorsOut" class="out"></pre>
+
+        <h2>Auditores</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Nome</span>
+            <input id="auditorName" placeholder="Nome do auditor" />
+          </label>
+          <label class="field">
+            <span>NFC UID</span>
+            <input id="auditorUid" placeholder="UID do cartão" />
+          </label>
+          <label class="field">
+            <span>Senha</span>
+            <input id="auditorPass" type="password" placeholder="Senha do auditor" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnCreateAuditor" style="max-width: 240px">Criar auditor</button>
+        </div>
+        <pre id="auditorsOut" class="out"></pre>
+
+        <h2>Barracas do evento</h2>
+        <div class="row">
+          <label class="field">
+            <span>Expositor</span>
+            <select id="boothExhibitor"></select>
+          </label>
+          <label class="field">
+            <span>Nome da barraca</span>
+            <input id="boothName" placeholder="Nome da barraca" />
+          </label>
+          <button id="btnCreateBooth" style="max-width: 220px">Criar barraca</button>
+        </div>
+        <div class="row">
+          <button id="btnLoadBooths" class="secondary" style="max-width: 220px">
+            Listar barracas do evento
+          </button>
+        </div>
+        <pre id="boothsOut" class="out"></pre>
+      </section>
+    </div>
+
+    <script src="/ui/app.js"></script>
+    <script>
+      window.UI_API_BASE = window.location.origin;
+
+      function requireProducerSession() {
+        const s = UI.getSession();
+        if (!s || s.role !== "producer" || !s.token) {
+          location.href = "/ui/";
+          return null;
+        }
+        return s;
+      }
+
+      async function loadEvents() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const data = await UI.api("/events", { token: s.token });
+
+        // Texto bem visível com os eventos desse produtor
+        const out = document.getElementById("eventsOut");
+        const debug = document.getElementById("debugSession");
+        if (debug) {
+          const payload = s.payload || {};
+          const count = Array.isArray(data) ? data.length : 0;
+          debug.textContent =
+            `Produtor logado: ` +
+            (payload.name || "(sem nome no token)") +
+            ` | id: ` +
+            (payload.id || s.tokenId || "(sem id no token)") +
+            ` | eventos retornados pelo backend: ${count}`;
+        }
+
+        if (out) {
+          if (!data || data.length === 0) {
+            out.textContent = "Nenhum evento cadastrado para este produtor.";
+          } else {
+            out.textContent =
+              "Eventos deste produtor:\n" +
+              data.map((e) => `• ${e.name}`).join("\n");
+          }
+        }
+
+        // Select com placeholder claro
+        const sel = document.getElementById("eventSelect");
+        sel.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Selecione um evento...";
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        sel.appendChild(placeholder);
+
+        if (data) {
+          for (const e of data) {
+            const opt = document.createElement("option");
+            opt.value = e.id;
+            opt.textContent = e.name;
+            sel.appendChild(opt);
+          }
+        }
+      }
+
+      async function createEvent() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const name = document.getElementById("eventName").value.trim();
+        if (!name) throw new Error("Informe o nome do evento.");
+        await UI.api("/events", {
+          method: "POST",
+          token: s.token,
+          json: { name },
+        });
+        await loadEvents();
+      }
+
+      async function loadBooths() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const eventId = document.getElementById("eventSelect").value;
+        if (!eventId) throw new Error("Selecione um evento.");
+        const data = await UI.api(`/events/${eventId}/booths`, { token: s.token });
+        const out = document.getElementById("boothsOut");
+        if (out) {
+          if (!data || data.length === 0) {
+            out.textContent = "Nenhuma barraca cadastrada para este evento.";
+          } else {
+            out.textContent = data
+              .map((b) => {
+                const exName =
+                  (window.exhibitorsIndex && window.exhibitorsIndex[b.exhibitor_id]) ||
+                  "expositor desconhecido";
+                return `• ${b.name} – Expositor: ${exName}`;
+              })
+              .join("\n");
+          }
+        }
+      }
+@@
+      async function loadExhibitors() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const data = await UI.api("/exhibitors", { token: s.token });
+        const out = document.getElementById("exhibitorsOut");
+        if (out) {
+          if (!data || data.length === 0) {
+            out.textContent = "Nenhum expositor cadastrado.";
+          } else {
+            out.textContent = data.map((ex) => `• ${ex.name}`).join("\n");
+          }
+        }
+        // manter índice global simples para usar nos nomes dos expositores
+        window.exhibitorsIndex = {};
+        const sel = document.getElementById("boothExhibitor");
+        if (sel) sel.innerHTML = "";
+        if (data && sel) {
+          for (const ex of data) {
+            window.exhibitorsIndex[ex.id] = ex.name;
+            const opt = document.createElement("option");
+            opt.value = ex.id;
+            opt.textContent = ex.name;
+            sel.appendChild(opt);
+          }
+        }
+      }
+@@
+      async function createBooth() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const eventId = document.getElementById("eventSelect").value;
+        if (!eventId) throw new Error("Selecione um evento.");
+        const exhibitorSel = document.getElementById("boothExhibitor");
+        const exhibitor_id = exhibitorSel ? exhibitorSel.value : "";
+        const booth_name = document.getElementById("boothName").value.trim();
+        if (!exhibitor_id || !booth_name) {
+          throw new Error("Escolha um expositor e informe o nome da barraca.");
+        }
+        await UI.api("/opening", {
+          method: "POST",
+          token: s.token,
+          json: {
+            event_id: eventId,
+            exhibitor_id,
+            booth_name,
+          },
+        });
+        await loadBooths();
+      }
+
+      async function loadAuditors() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const data = await UI.api("/auditors", { token: s.token });
+        const out = document.getElementById("auditorsOut");
+        if (out) {
+          if (!data || data.length === 0) {
+            out.textContent = "Nenhum auditor cadastrado.";
+          } else {
+            out.textContent = data
+              .map((a) => `• ${a.name} (UID ${a.nfc_uid})`)
+              .join("\n");
+          }
+        }
+      }
+
+      async function createExhibitor() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const name = document.getElementById("exhibitorName").value.trim();
+        if (!name) throw new Error("Informe o nome do expositor.");
+        const producerId = s.payload && s.payload.id;
+        if (!producerId) throw new Error("Token sem id do produtor.");
+        await UI.api("/exhibitors", {
+          method: "POST",
+          token: s.token,
+          json: { producer_id: producerId, name },
+        });
+        await loadExhibitors();
+      }
+
+      async function createAuditor() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const producerId = s.payload && s.payload.id;
+        const name = document.getElementById("auditorName").value.trim();
+        const nfc_uid = document.getElementById("auditorUid").value.trim();
+        const password = document.getElementById("auditorPass").value;
+        if (!producerId || !name || !nfc_uid || !password) {
+          throw new Error("Preencha: nome, nfc_uid e senha do auditor.");
+        }
+        const created = await UI.api("/auditors/register", {
+          method: "POST",
+          token: s.token,
+          json: { producer_id: producerId, name, nfc_uid, password },
+        });
+        const out = document.getElementById("auditorsOut");
+        if (out) {
+          const base = window.location.origin || "";
+          const link = `${base}/ui/auditor.html?uid=${encodeURIComponent(
+            created.nfc_uid
+          )}`;
+          const current = out.textContent ? out.textContent + "\n" : "";
+          out.textContent =
+            current +
+            `• ${created.name} (UID ${created.nfc_uid})\n` +
+            `  Link NFC: ${link}`;
+        }
+      }
+
+      async function withdraw() {
+        // função mantida vazia por enquanto; retirada de caixa não faz parte
+        // deste fluxo de sistema de auditoria de barracas.
+      }
+
+      function boot() {
+        const s = requireProducerSession();
+        if (!s) return;
+        const nameSpan = document.getElementById("producerName");
+        if (nameSpan) {
+          nameSpan.textContent = s.payload && s.payload.name
+            ? `Produtor: ${s.payload.name}`
+            : "Produtor conectado";
+        }
+        document.getElementById("btnLogout").onclick = () => {
+          UI.clearSession();
+          location.href = "/ui/";
+        };
+        document.getElementById("btnCreateEvent").onclick = () =>
+          createEvent().catch((e) => alert(e.message || e));
+        document.getElementById("btnLoadBooths").onclick = () =>
+          loadBooths().catch((e) => alert(e.message || e));
+        document.getElementById("btnLoadExhibitors").onclick = () =>
+          loadExhibitors().catch((e) => alert(e.message || e));
+        document.getElementById("btnCreateExhibitor").onclick = () =>
+          createExhibitor().catch((e) => alert(e.message || e));
+        document.getElementById("btnCreateAuditor").onclick = () =>
+          createAuditor().catch((e) => alert(e.message || e));
+        const createBoothBtn = document.getElementById("btnCreateBooth");
+        if (createBoothBtn) {
+          createBoothBtn.onclick = () => createBooth().catch((e) => alert(e.message || e));
+        }
+
+        // alternar seções de sistemas
+        const auditSection = document.getElementById("auditSection");
+        if (auditSection) {
+          auditSection.style.display = "none";
+        }
+        document.getElementById("btnAuditSystem").onclick = () => {
+          if (auditSection) auditSection.style.display = "";
+          loadExhibitors().catch(() => {});
+          loadAuditors().catch(() => {});
+        };
+        document.getElementById("btnStockSystem").onclick = () => {
+          alert("Sistema de Controle de Estoque será implementado em seguida.");
+        };
+
+        // Carrega eventos e expositores iniciais
+        loadEvents().catch(() => {});
+        loadExhibitors().catch(() => {});
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
+

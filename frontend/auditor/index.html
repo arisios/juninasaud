@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Painel Auditor</title>
+</head>
+<body>
+
+  <h2>Login Auditor</h2>
+  <input id="nfc_uid" placeholder="NFC UID Auditor">
+  <input id="password" type="password" placeholder="Senha">
+  <button onclick="login()">Login</button>
+
+  <hr>
+
+  <h2>Scan NFC Barraca</h2>
+  <input id="tag" placeholder="NFC da Barraca">
+  <button onclick="scanNFC()">Consultar</button>
+
+  <pre id="result"></pre>
+
+  <script src="app.js"></script>
+</body>
+</html>

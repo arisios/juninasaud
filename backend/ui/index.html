@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema Juninas do Rio</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header header-centered">
+        <div>
+          <h1>Sistema Juninas do Rio</h1>
+        </div>
+      </header>
+
+      <section class="card card-narrow">
+        <div class="grid single">
+          <label class="field">
+            <span>Login</span>
+            <input id="login" placeholder="Produtor: nome | Auditor: nfc_uid" />
+          </label>
+
+          <label class="field">
+            <span>Senha</span>
+            <input id="password" type="password" placeholder="Senha" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btnLogin">Entrar</button>
+        </div>
+
+        <pre id="out" class="out" aria-live="polite"></pre>
+      </section>
+    </div>
+
+    <script src="/ui/app.js"></script>
+    <script>
+      window.UI_API_BASE = window.location.origin;
+      window.UI_INIT && window.UI_INIT();
+    </script>
+  </body>
+</html>
+

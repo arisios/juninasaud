@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel do Auditor</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div>
+          <h1>Painel do Auditor</h1>
+          <p class="muted">Abrir barraca, auditoria periódica/final, NFC.</p>
+        </div>
+        <div class="right">
+          <a class="linkbtn" href="/ui/">Voltar</a>
+          <button id="btnLogout" class="secondary" style="max-width: 180px">Sair</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Status</h2>
+        <pre id="status" class="out"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Criar barraca (Abertura /opening)</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Event ID</span>
+            <input id="oEvent" placeholder="ID do evento" />
+          </label>
+          <label class="field">
+            <span>Exhibitor ID</span>
+            <input id="oExhibitor" placeholder="ID do expositor" />
+          </label>
+          <label class="field">
+            <span>Nome da barraca</span>
+            <input id="oName" placeholder="Nome" />
+          </label>
+          <label class="field">
+            <span>Intervalo auditoria (min)</span>
+            <input id="oInterval" type="number" placeholder="Ex.: 30 (opcional)" />
+          </label>
+          <label class="field">
+            <span>NFC UID da barraca</span>
+            <input id="oUid" placeholder="UID (opcional)" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnOpening" style="max-width: 240px">Criar barraca</button>
+        </div>
+        <pre id="openingOut" class="out"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Auditoria periódica (/periodic)</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Booth ID</span>
+            <input id="pBooth" placeholder="ID da barraca" />
+          </label>
+          <label class="field">
+            <span>Valor máquina</span>
+            <input id="pMachine" type="number" placeholder="0" />
+          </label>
+          <label class="field">
+            <span>Valor dinheiro</span>
+            <input id="pCash" type="number" placeholder="0" />
+          </label>
+          <label class="field">
+            <span>Observação</span>
+            <input id="pObs" placeholder="Opcional" />
+          </label>
+          <label class="field">
+            <span>Fotos (opcional, até 4)</span>
+            <input id="pPhotos" type="file" multiple accept="image/*" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnPeriodic" style="max-width: 240px">Enviar periódica</button>
+        </div>
+        <pre id="periodicOut" class="out"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Auditoria final (/final)</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Booth ID</span>
+            <input id="fBooth" placeholder="ID da barraca" />
+          </label>
+          <label class="field">
+            <span>Valor máquina</span>
+            <input id="fMachine" type="number" placeholder="0" />
+          </label>
+          <label class="field">
+            <span>Valor dinheiro</span>
+            <input id="fCash" type="number" placeholder="0" />
+          </label>
+          <label class="field">
+            <span>Observação</span>
+            <input id="fObs" placeholder="Opcional" />
+          </label>
+          <label class="field">
+            <span>Fotos (opcional, até 4)</span>
+            <input id="fPhotos" type="file" multiple accept="image/*" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnFinal" style="max-width: 240px">Finalizar barraca</button>
+        </div>
+        <pre id="finalOut" class="out"></pre>
+      </section>
+
+      <section class="card">
+        <h2>NFC resolver (/nfc/:uid)</h2>
+        <div class="row">
+          <label class="field">
+            <span>UID</span>
+            <input id="nUid" placeholder="UID da tag" />
+          </label>
+          <button id="btnResolve" class="secondary" style="max-width: 240px">
+            Resolver UID
+          </button>
+        </div>
+        <pre id="nfcOut" class="out"></pre>
+      </section>
+    </div>
+
+    <script src="/ui/app.js"></script>
+    <script>
+      window.UI_API_BASE = window.location.origin;
+
+      function requireAuditorSession() {
+        const s = UI.getSession();
+        if (!s || s.role !== "auditor" || !s.token) {
+          location.href = "/ui/";
+          return null;
+        }
+        return s;
+      }
+
+      function setStatus(obj) {
+        document.getElementById("status").textContent = JSON.stringify(obj, null, 2);
+      }
+
+      async function opening() {
+        const s = requireAuditorSession();
+        if (!s) return;
+        const event_id = document.getElementById("oEvent").value.trim();
+        const exhibitor_id = document.getElementById("oExhibitor").value.trim();
+        const booth_name = document.getElementById("oName").value.trim();
+        const audit_interval_minutes = document.getElementById("oInterval").value;
+        const nfc_uid = document.getElementById("oUid").value.trim();
+
+        const payload = {
+          event_id,
+          exhibitor_id,
+          booth_name,
+          audit_interval_minutes: audit_interval_minutes ? Number(audit_interval_minutes) : undefined,
+          nfc_uid: nfc_uid || undefined,
+        };
+
+        const data = await UI.api("/opening", {
+          method: "POST",
+          token: s.token,
+          json: payload,
+        });
+        document.getElementById("openingOut").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function periodic() {
+        const s = requireAuditorSession();
+        if (!s) return;
+        const booth_id = document.getElementById("pBooth").value.trim();
+        const value_machine = document.getElementById("pMachine").value;
+        const value_cash = document.getElementById("pCash").value;
+        const observation = document.getElementById("pObs").value.trim();
+        const photos = document.getElementById("pPhotos").files;
+        if (!booth_id) throw new Error("Informe booth_id.");
+
+        const form = new FormData();
+        form.append("booth_id", booth_id);
+        form.append("value_machine", value_machine ?? "0");
+        form.append("value_cash", value_cash ?? "0");
+        if (observation) form.append("observation", observation);
+        for (let i = 0; i < Math.min(4, photos.length); i++) {
+          form.append("photos", photos[i]);
+        }
+
+        const data = await UI.api("/periodic", { method: "POST", token: s.token, formData: form });
+        document.getElementById("periodicOut").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function finalize() {
+        const s = requireAuditorSession();
+        if (!s) return;
+        const booth_id = document.getElementById("fBooth").value.trim();
+        const value_machine = document.getElementById("fMachine").value;
+        const value_cash = document.getElementById("fCash").value;
+        const observation = document.getElementById("fObs").value.trim();
+        const photos = document.getElementById("fPhotos").files;
+        if (!booth_id) throw new Error("Informe booth_id.");
+
+        const form = new FormData();
+        form.append("booth_id", booth_id);
+        form.append("value_machine", value_machine ?? "0");
+        form.append("value_cash", value_cash ?? "0");
+        if (observation) form.append("observation", observation);
+        for (let i = 0; i < Math.min(4, photos.length); i++) {
+          form.append("photos", photos[i]);
+        }
+
+        const data = await UI.api("/final", { method: "POST", token: s.token, formData: form });
+        document.getElementById("finalOut").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function resolveNfc() {
+        const s = requireAuditorSession();
+        if (!s) return;
+        const uid = document.getElementById("nUid").value.trim();
+        if (!uid) throw new Error("Informe o UID.");
+        const data = await UI.api(`/nfc/${encodeURIComponent(uid)}`, { token: s.token });
+        document.getElementById("nfcOut").textContent = JSON.stringify(data, null, 2);
+      }
+
+      function boot() {
+        const s = requireAuditorSession();
+        if (!s) return;
+        setStatus({ role: s.role, payload: s.payload });
+        document.getElementById("btnLogout").onclick = () => {
+          UI.clearSession();
+          location.href = "/ui/";
+        };
+        document.getElementById("btnOpening").onclick = () =>
+          opening().catch((e) => alert(e.message || e));
+        document.getElementById("btnPeriodic").onclick = () =>
+          periodic().catch((e) => alert(e.message || e));
+        document.getElementById("btnFinal").onclick = () =>
+          finalize().catch((e) => alert(e.message || e));
+        document.getElementById("btnResolve").onclick = () =>
+          resolveNfc().catch((e) => alert(e.message || e));
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
+

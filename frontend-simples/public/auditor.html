@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel do Auditor</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div>
+          <h1>Painel do Auditor</h1>
+        </div>
+        <div class="right">
+          <button id="btnLogout">Sair</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Auditoria da barraca</h2>
+        <p class="muted">
+          Preencha os valores e envie pelo menos um valor ou uma foto.
+        </p>
+
+        <div class="grid single">
+          <label class="field">
+            <span>Valor em cartão (R$)</span>
+            <input id="valueMachine" type="number" step="0.01" min="0" />
+          </label>
+
+          <label class="field">
+            <span>Valor em dinheiro (R$)</span>
+            <input id="valueCash" type="number" step="0.01" min="0" />
+          </label>
+
+          <label class="field">
+            <span>Fotos (1 a 4)</span>
+            <input id="photos" type="file" accept="image/*" multiple />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btnSendAudit">Enviar auditoria</button>
+        </div>
+
+        <pre id="out" class="out"></pre>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+    <script>
+      (function () {
+        const s = Front.getSession();
+        if (!s || s.role !== "auditor" || !s.token) {
+          window.location.href = "/";
+          return;
+        }
+
+        const out = document.getElementById("out");
+        function setOut(msg) {
+          if (out) out.textContent = msg || "";
+        }
+
+        document.getElementById("btnLogout").onclick = () => {
+          Front.clearSession();
+          window.location.href = "/";
+        };
+
+        document.getElementById("btnSendAudit").onclick = async () => {
+          try {
+            const valueMachine = parseFloat(
+              document.getElementById("valueMachine").value || "0",
+            );
+            const valueCash = parseFloat(
+              document.getElementById("valueCash").value || "0",
+            );
+            const files = document.getElementById("photos").files || [];
+
+            const hasValue =
+              (Number.isFinite(valueMachine) && valueMachine > 0) ||
+              (Number.isFinite(valueCash) && valueCash > 0);
+            const hasPhoto = files.length > 0;
+
+            if (!hasValue && !hasPhoto) {
+              setOut(
+                "Informe ao menos um valor (cartão ou dinheiro) ou envie ao menos uma foto.",
+              );
+              return;
+            }
+
+            setOut("Enviando auditoria...");
+
+            const formData = new FormData();
+            if (Number.isFinite(valueMachine) && valueMachine > 0) {
+              formData.append("value_machine", String(valueMachine));
+            }
+            if (Number.isFinite(valueCash) && valueCash > 0) {
+              formData.append("value_cash", String(valueCash));
+            }
+            for (let i = 0; i < Math.min(files.length, 4); i++) {
+              formData.append("photos", files[i]);
+            }
+
+            // Aqui estamos assumindo que o backend já sabe booth_id/audit_type
+            // a partir do token ou da rota; se precisar, depois refinamos essa rota.
+            await Front.api("/audits", {
+              method: "POST",
+              token: s.token,
+              formData,
+            });
+
+            setOut("Auditoria enviada com sucesso.");
+          } catch (e) {
+            setOut(String(e.message || e));
+          }
+        };
+      })();
+    </script>
+  </body>
+  </html>
+

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Painel do Auditor</title>
+
+<link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+
+<div id="app">
+
+<header>
+
+<h1>Painel do Auditor</h1>
+<p>Auditoria de Barracas</p>
+
+</header>
+
+<main>
+
+<!-- LOGIN -->
+
+<div id="login" class="screen active">
+
+<div class="card">
+
+<div class="card-header">Login Auditor</div>
+
+<form onsubmit="handleLogin(event)">
+
+<label>Nome</label>
+<input type="text" id="login-name" required>
+
+<label>Senha</label>
+<input type="password" id="login-password" required>
+
+<button class="btn-primary">Entrar</button>
+
+</form>
+
+</div>
+
+</div>
+
+<!-- DASHBOARD -->
+
+<div id="dashboard" class="screen">
+
+<div class="card">
+
+<div class="card-header">Fila de Auditorias</div>
+
+<div id="booths"></div>
+
+</div>
+
+</div>
+
+<!-- AUDITORIA -->
+
+<div id="audit" class="screen">
+
+<div class="card">
+
+<div class="card-header">Auditoria da Barraca</div>
+
+<form onsubmit="submitAudit(event)">
+
+<input type="hidden" id="booth-id">
+
+<label>Valor Máquina</label>
+<input type="number" id="value-machine" step="0.01" required>
+
+<label>Valor Dinheiro</label>
+<input type="number" id="value-cash" step="0.01" required>
+
+<label>Total</label>
+<input type="number" id="value-total" disabled>
+
+<label>Observação</label>
+<textarea id="observation"></textarea>
+
+<label>Fotos</label>
+<input type="file" id="photos" multiple accept="image/*">
+
+<button class="btn-success">Enviar Auditoria</button>
+
+</form>
+
+</div>
+
+</div>
+
+</main>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+
+</div>
+
+</body>
+</html>

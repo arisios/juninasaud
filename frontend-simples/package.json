@@ -1,0 +1,14 @@
+{
+  "name": "frontend-simples-auditoria-nfc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend simples (HTML+JS) para Sistema de Auditoria NFC",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "cors": "^2.8.6"
+  }
+}
+

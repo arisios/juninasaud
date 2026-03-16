@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel do Produtor</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div>
+          <h1>Painel do Produtor</h1>
+        </div>
+        <div class="right">
+          <span id="producerName" class="pill"></span>
+          <button id="btnLogout">Sair</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Eventos</h2>
+        <p id="debugSession" class="muted"></p>
+        <div class="row">
+          <label class="field">
+            <span>Novo evento (nome)</span>
+            <input id="eventName" placeholder="Nome do evento" />
+          </label>
+          <button id="btnCreateEvent" style="max-width: 220px">Criar evento</button>
+        </div>
+        <div class="row">
+          <label class="field">
+            <span>Evento selecionado</span>
+            <select id="eventSelect"></select>
+          </label>
+        </div>
+        <pre id="eventsOut" class="out"></pre>
+      </section>
+
+      <section class="card">
+        <h2>Sistemas do evento selecionado</h2>
+        <p class="muted">
+          Escolha um sistema para gerenciar o evento selecionado acima.
+        </p>
+        <div class="row">
+          <button id="btnAuditSystem">Sistema de Auditoria de Barracas</button>
+          <button id="btnStockSystem" class="secondary">
+            Sistema de Controle de Estoque
+          </button>
+        </div>
+      </section>
+
+      <section class="card" id="auditSection">
+        <h2>Expositores</h2>
+        <div class="row">
+          <label class="field">
+            <span>Novo expositor (nome)</span>
+            <input id="exhibitorName" placeholder="Nome do expositor" />
+          </label>
+          <button id="btnCreateExhibitor" style="max-width: 220px">
+            Criar expositor
+          </button>
+        </div>
+        <div class="row">
+          <button id="btnLoadExhibitors" class="secondary" style="max-width: 220px">
+            Listar expositores
+          </button>
+        </div>
+        <pre id="exhibitorsOut" class="out"></pre>
+
+        <h2>Auditores</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Nome</span>
+            <input id="auditorName" placeholder="Nome do auditor" />
+          </label>
+          <label class="field">
+            <span>NFC UID</span>
+            <input id="auditorUid" placeholder="UID do cartão" />
+          </label>
+          <label class="field">
+            <span>Senha</span>
+            <input id="auditorPass" type="password" placeholder="Senha do auditor" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnCreateAuditor" style="max-width: 240px">Criar auditor</button>
+        </div>
+        <pre id="auditorsOut" class="out"></pre>
+
+        <h2>Barracas do evento</h2>
+        <div class="row">
+          <label class="field">
+            <span>Expositor</span>
+            <select id="boothExhibitor"></select>
+          </label>
+          <label class="field">
+            <span>Nome da barraca</span>
+            <input id="boothName" placeholder="Nome da barraca" />
+          </label>
+          <button id="btnCreateBooth" style="max-width: 220px">Criar barraca</button>
+        </div>
+        <div class="row">
+          <button id="btnLoadBooths" class="secondary" style="max-width: 220px">
+            Listar barracas do evento
+          </button>
+        </div>
+        <pre id="boothsOut" class="out"></pre>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+    <script>
+      (function () {
+        const s = Front.getSession();
+        if (!s || s.role !== "producer" || !s.token) {
+          window.location.href = "/";
+          return;
+        }
+
+        const nameSpan = document.getElementById("producerName");
+        if (nameSpan) {
+          const payload = s.payload || {};
+          nameSpan.textContent = payload.name
+            ? `Produtor: ${payload.name}`
+            : "Produtor conectado";
+        }
+
+        const debug = document.getElementById("debugSession");
+
+        async function loadEvents() {
+          const data = await Front.api("/events", { token: s.token });
+
+          if (debug) {
+            const payload = s.payload || {};
+            const count = Array.isArray(data) ? data.length : 0;
+            debug.textContent =
+              `Produtor logado: ` +
+              (payload.name || "(sem nome)") +
+              ` | eventos retornados pelo backend: ${count}`;
+          }
+
+          const out = document.getElementById("eventsOut");
+          if (out) {
+            if (!data || data.length === 0) {
+              out.textContent = "Nenhum evento cadastrado para este produtor.";
+            } else {
+              out.textContent =
+                "Eventos deste produtor:\n" +
+                data.map((e) => `• ${e.name}`).join("\n");
+            }
+          }
+
+          const sel = document.getElementById("eventSelect");
+          if (sel) {
+            sel.innerHTML = "";
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Selecione um evento...";
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            sel.appendChild(placeholder);
+            if (data) {
+              for (const e of data) {
+                const opt = document.createElement("option");
+                opt.value = e.id;
+                opt.textContent = e.name;
+                sel.appendChild(opt);
+              }
+            }
+          }
+        }
+
+        async function createEvent() {
+          const nameInput = document.getElementById("eventName");
+          const name = (nameInput.value || "").trim();
+          if (!name) {
+            Front.setOut("Informe o nome do evento.");
+            return;
+          }
+          await Front.api("/events", {
+            method: "POST",
+            token: s.token,
+            json: { name },
+          });
+          nameInput.value = "";
+          await loadEvents();
+        }
+
+        async function loadExhibitors() {
+          // No backend atual, expositores são do produtor (não por evento).
+          const data = await Front.api("/exhibitors", {
+            token: s.token,
+          });
+
+          const out = document.getElementById("exhibitorsOut");
+          if (out) {
+            if (!data || data.length === 0) {
+              out.textContent = "Nenhum expositor cadastrado para este evento.";
+            } else {
+              out.textContent =
+                "Expositores:\n" + data.map((e) => `• ${e.name}`).join("\n");
+            }
+          }
+
+          const sel = document.getElementById("boothExhibitor");
+          if (sel) {
+            sel.innerHTML = "";
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "Selecione um expositor...";
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            sel.appendChild(placeholder);
+            if (data) {
+              for (const ex of data) {
+                const opt = document.createElement("option");
+                opt.value = ex.id;
+                opt.textContent = ex.name;
+                sel.appendChild(opt);
+              }
+            }
+          }
+        }
+
+        async function createExhibitor() {
+          const nameInput = document.getElementById("exhibitorName");
+          const name = (nameInput.value || "").trim();
+          if (!name) {
+            Front.setOut("Informe o nome do expositor.");
+            return;
+          }
+          // Backend espera producer_id + name
+          const producerId = s.payload && s.payload.id;
+          await Front.api(`/exhibitors`, {
+            method: "POST",
+            token: s.token,
+            json: { name, producer_id: producerId },
+          });
+          nameInput.value = "";
+          await loadExhibitors();
+        }
+
+        async function loadAuditors() {
+          const data = await Front.api("/auditors", { token: s.token });
+          const out = document.getElementById("auditorsOut");
+          if (out) {
+            if (!data || data.length === 0) {
+              out.textContent = "Nenhum auditor cadastrado para este produtor.";
+            } else {
+              const baseUrl = window.location.origin;
+              out.textContent = data
+                .map((a) => {
+                  const link = `${baseUrl}/?login=auditor:${encodeURIComponent(
+                    a.nfc_uid || "",
+                  )}`;
+                  return `• ${a.name} (${a.nfc_uid})\n  NFC link: ${link}`;
+                })
+                .join("\n\n");
+            }
+          }
+        }
+
+        async function createAuditor() {
+          const name = (document.getElementById("auditorName").value || "").trim();
+          const uid = (document.getElementById("auditorUid").value || "").trim();
+          const pass = document.getElementById("auditorPass").value || "";
+          if (!name || !uid || !pass) {
+            Front.setOut("Preencha nome, NFC UID e senha.");
+            return;
+          }
+          await Front.api("/auditors/register", {
+            method: "POST",
+            json: { name, nfc_uid: uid, password: pass },
+          });
+          await loadAuditors();
+        }
+
+        async function loadBooths() {
+          const selEvent = document.getElementById("eventSelect");
+          const eventId = selEvent && selEvent.value;
+          if (!eventId) {
+            Front.setOut("Selecione um evento.");
+            return;
+          }
+          const data = await Front.api(`/events/${eventId}/booths`, {
+            token: s.token,
+          });
+          const out = document.getElementById("boothsOut");
+          if (out) {
+            if (!data || data.length === 0) {
+              out.textContent = "Nenhuma barraca cadastrada para este evento.";
+            } else {
+              const baseUrl = window.location.origin;
+              out.textContent = data
+                .map((b) => {
+                  const link = `${baseUrl}/b/${b.id}`;
+                  return `• ${b.name} – Expositor: ${b.exhibitor_name || "?"}\n  Link NFC da barraca: ${link}`;
+                })
+                .join("\n\n");
+            }
+          }
+        }
+
+        async function createBooth() {
+          const selEvent = document.getElementById("eventSelect");
+          const eventId = selEvent && selEvent.value;
+          const selEx = document.getElementById("boothExhibitor");
+          const exhibitorId = selEx && selEx.value;
+          const nameInput = document.getElementById("boothName");
+          const name = (nameInput.value || "").trim();
+          if (!eventId) {
+            Front.setOut("Selecione um evento.");
+            return;
+          }
+          if (!exhibitorId) {
+            Front.setOut("Selecione um expositor.");
+            return;
+          }
+          if (!name) {
+            Front.setOut("Informe o nome da barraca.");
+            return;
+          }
+          await Front.api(`/events/${eventId}/booths`, {
+            method: "POST",
+            token: s.token,
+            json: { name, exhibitor_id: exhibitorId },
+          });
+          nameInput.value = "";
+          await loadBooths();
+        }
+
+        const auditSection = document.getElementById("auditSection");
+        if (auditSection) auditSection.style.display = "none";
+
+        document.getElementById("btnAuditSystem").onclick = () => {
+          if (auditSection) auditSection.style.display = "";
+          loadExhibitors().catch(() => {});
+          loadAuditors().catch(() => {});
+          loadBooths().catch(() => {});
+        };
+
+        document.getElementById("btnStockSystem").onclick = () => {
+          alert("Sistema de Controle de Estoque será implementado em seguida.");
+        };
+
+        document.getElementById("btnLogout").onclick = () => {
+          Front.clearSession();
+          window.location.href = "/";
+        };
+        document.getElementById("btnCreateEvent").onclick = () =>
+          createEvent().catch((e) => Front.setOut(String(e.message || e)));
+        document.getElementById("btnLoadExhibitors").onclick = () =>
+          loadExhibitors().catch((e) => Front.setOut(String(e.message || e)));
+        document.getElementById("btnCreateExhibitor").onclick = () =>
+          createExhibitor().catch((e) => Front.setOut(String(e.message || e)));
+        document.getElementById("btnCreateAuditor").onclick = () =>
+          createAuditor().catch((e) => Front.setOut(String(e.message || e)));
+        document.getElementById("btnLoadBooths").onclick = () =>
+          loadBooths().catch((e) => Front.setOut(String(e.message || e)));
+
+        loadEvents().catch((e) => Front.setOut(String(e.message || e)));
+      })();
+    </script>
+  </body>
+  </html>
+

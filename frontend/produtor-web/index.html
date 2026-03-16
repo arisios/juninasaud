@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Produtor - Auditoria de Barracas</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- HEADER -->
+    <header>
+      <div class="logo-space">
+        <img id="logo" src="" alt="Logo" style="display: none;">
+        <span id="logo-placeholder">Espaço para Logomarca</span>
+      </div>
+      <h1>Painel do Produtor</h1>
+      <p id="header-subtitle" style="display: none;">Auditoria de Barracas</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+      <!-- TELA 1: LOGIN -->
+      <div id="login" class="screen active">
+        <div class="card">
+          <div class="card-header">Entrar no Sistema</div>
+          <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label for="login-name">Nome do Produtor</label>
+              <input 
+                type="text" 
+                id="login-name" 
+                placeholder="Digite seu nome"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="login-password">Senha</label>
+              <input 
+                type="password" 
+                id="login-password" 
+                placeholder="Digite sua senha"
+                required
+              >
+            </div>
+
+            <button type="submit" class="btn-primary">Entrar</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TELA 2: DASHBOARD DO PRODUTOR -->
+      <div id="dashboard" class="screen">
+        <div class="card">
+          <div class="card-header">Meus Eventos</div>
+          <div id="events-list"></div>
+          <button class="btn-success" onclick="goToCreateEvent()">+ Criar Novo Evento</button>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()">Sair da Conta</button>
+      </div>
+
+      <!-- TELA 3: CRIAR EVENTO -->
+      <div id="create-event" class="screen">
+        <div class="card">
+          <div class="card-header">Criar Novo Evento</div>
+          <form onsubmit="handleCreateEvent(event)">
+            <div class="form-group">
+              <label for="event-name">Nome do Evento</label>
+              <input 
+                type="text" 
+                id="event-name" 
+                placeholder="Ex: Feira de Tecnologia 2024"
+                required
+              >
+            </div>
+            <button type="submit" class="btn-primary">Criar Evento</button>
+            <button type="button" class="btn-secondary" onclick="showScreen('dashboard')">Cancelar</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TELA 4: CRIAR EXPOSITOR -->
+      <div id="create-exhibitor" class="screen">
+        <div class="card">
+          <div class="card-header">Criar Novo Expositor</div>
+          <form onsubmit="handleCreateExhibitor(event)">
+            <div class="form-group">
+              <label for="exhibitor-name">Nome do Expositor</label>
+              <input 
+                type="text" 
+                id="exhibitor-name" 
+                placeholder="Ex: Empresa XYZ"
+                required
+              >
+            </div>
+            <button type="submit" class="btn-primary">Criar Expositor</button>
+            <button type="button" class="btn-secondary" onclick="showScreen('event-dashboard')">Cancelar</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TELA 5: CRIAR BARRACA -->
+      <div id="create-booth" class="screen">
+        <div class="card">
+          <div class="card-header">Criar Nova Barraca</div>
+          <form onsubmit="handleCreateBooth(event)">
+            <div class="form-group">
+              <label for="booth-name">Nome da Barraca</label>
+              <input 
+                type="text" 
+                id="booth-name" 
+                placeholder="Ex: Stand A1"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="booth-exhibitor">Expositor</label>
+              <select id="booth-exhibitor" required>
+                <option value="">-- Selecione um expositor --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="booth-audit-interval">Intervalo de Auditoria (minutos)</label>
+              <input 
+                type="number" 
+                id="booth-audit-interval" 
+                placeholder="Ex: 30"
+                min="1"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="booth-nfc-uid">UID NFC da Barraca</label>
+              <input 
+                type="text" 
+                id="booth-nfc-uid" 
+                placeholder="Ex: 04A1B2C3D4E5F6"
+                required
+              >
+            </div>
+
+            <button type="submit" class="btn-primary">Criar Barraca</button>
+            <button type="button" class="btn-secondary" onclick="showScreen('event-dashboard')">Cancelar</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TELA 6: DASHBOARD DO EVENTO -->
+      <div id="event-dashboard" class="screen">
+        <div class="card">
+          <div class="card-header" id="event-title">Evento</div>
+          <div style="margin-bottom: 16px;">
+            <button class="btn-secondary btn-small" onclick="goBackToDashboard()">← Voltar</button>
+          </div>
+          <div id="booths-list"></div>
+          <button class="btn-success" onclick="goToCreateBooth()">+ Criar Barraca</button>
+          <button class="btn-warning" onclick="goToCreateExhibitor()">+ Criar Expositor</button>
+        </div>
+      </div>
+
+      <!-- TELA 7: REGISTRAR SANGRIA -->
+      <div id="withdrawal" class="screen">
+        <div class="card">
+          <div class="card-header">Registrar Sangria</div>
+          <div style="margin-bottom: 16px; padding: 12px; background-color: #f5f5f5; border-radius: 4px;">
+            <strong>Barraca:</strong> <span id="withdrawal-booth-name"></span>
+          </div>
+          <form onsubmit="handleWithdrawal(event)">
+            <input type="hidden" id="withdrawal-booth-id">
+
+            <div class="form-group">
+              <label for="withdrawal-amount">Valor (R$)</label>
+              <input 
+                type="number" 
+                id="withdrawal-amount" 
+                placeholder="Ex: 100.00"
+                step="0.01"
+                min="0"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="withdrawal-reason">Motivo</label>
+              <textarea 
+                id="withdrawal-reason" 
+                placeholder="Ex: Retirada de dinheiro para troco"
+                required
+              ></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary">Registrar Sangria</button>
+            <button type="button" class="btn-secondary" onclick="showScreen('event-dashboard')">Cancelar</button>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>© 2024 Sistema de Auditoria de Barracas - Versão 1.0</p>
+    </footer>
+  </div>
+
+  <!-- Scripts -->
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

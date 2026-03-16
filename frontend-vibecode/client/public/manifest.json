@@ -1,0 +1,62 @@
+{
+  "name": "Event Booth Management System",
+  "short_name": "Event Booth",
+  "description": "Sistema operacional para gestão de eventos presenciais",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0066FF",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230066FF' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='80' font-weight='bold' fill='white' font-family='sans-serif'>EB</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230066FF' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='80' font-weight='bold' fill='white' font-family='sans-serif'>EB</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23F8F9FA' width='540' height='720'/><rect fill='%230066FF' width='540' height='60'/><text x='270' y='35' text-anchor='middle' dominant-baseline='middle' font-size='24' font-weight='bold' fill='white' font-family='sans-serif'>Event Booth</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Acesse seu dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%230066FF' width='96' height='96'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='40' font-weight='bold' fill='white' font-family='sans-serif'>EB</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Escanear Barraca",
+      "short_name": "Escanear",
+      "description": "Escaneie uma barraca",
+      "url": "/booth-entry",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%230066FF' width='96' height='96'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='40' font-weight='bold' fill='white' font-family='sans-serif'>QR</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
