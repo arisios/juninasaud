@@ -37,15 +37,21 @@ exports.opening = async (req, res) => {
 
       const booth = boothInsert.rows[0];
 
-      const auditInsert = await client.query(
-        `INSERT INTO audit_sessions
-        (booth_id, auditor_id, audit_type, value_total)
-        VALUES ($1,$2,'OPENING',0)
-        RETURNING *`,
-        [booth.id, req.user.id]
-      );
+      // Para o auditor, mantemos a criação da sessão de abertura vinculada ao auditor.
+      // Para o produtor, criamos apenas a barraca – a auditoria virá depois.
+      let audit = null;
 
-      const audit = auditInsert.rows[0];
+      if (req.user.role === 'auditor') {
+        const auditInsert = await client.query(
+          `INSERT INTO audit_sessions
+          (booth_id, auditor_id, audit_type, value_total)
+          VALUES ($1,$2,'OPENING',0)
+          RETURNING *`,
+          [booth.id, req.user.id]
+        );
+
+        audit = auditInsert.rows[0];
+      }
 
       const nfc_url = `http://192.168.0.33:3000/b/${booth.id}`;
 

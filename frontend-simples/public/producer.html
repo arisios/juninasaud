@@ -269,9 +269,11 @@
             Front.setOut("Preencha nome, NFC UID e senha.");
             return;
           }
+          const producerId = s.payload && s.payload.id;
           await Front.api("/auditors/register", {
             method: "POST",
-            json: { name, nfc_uid: uid, password: pass },
+            token: s.token,
+            json: { producer_id: producerId, name, nfc_uid: uid, password: pass },
           });
           await loadAuditors();
         }
@@ -321,11 +323,24 @@
             Front.setOut("Informe o nome da barraca.");
             return;
           }
-          await Front.api(`/events/${eventId}/booths`, {
+          // Abertura segura da barraca usando o endpoint /opening do backend
+          const data = await Front.api(`/opening`, {
             method: "POST",
             token: s.token,
-            json: { name, exhibitor_id: exhibitorId },
+            json: {
+              event_id: eventId,
+              exhibitor_id: exhibitorId,
+              booth_name: name,
+            },
           });
+          const nameOut = data && data.booth && data.booth.name ? data.booth.name : name;
+          const out = document.getElementById("boothsOut");
+          if (out && data && data.nfc_url) {
+            const current = out.textContent ? out.textContent + "\n\n" : "";
+            out.textContent =
+              current +
+              `• ${nameOut}\n  Link NFC da barraca (do backend): ${data.nfc_url}`;
+          }
           nameInput.value = "";
           await loadBooths();
         }
@@ -356,6 +371,8 @@
           createExhibitor().catch((e) => Front.setOut(String(e.message || e)));
         document.getElementById("btnCreateAuditor").onclick = () =>
           createAuditor().catch((e) => Front.setOut(String(e.message || e)));
+        document.getElementById("btnCreateBooth").onclick = () =>
+          createBooth().catch((e) => Front.setOut(String(e.message || e)));
         document.getElementById("btnLoadBooths").onclick = () =>
           loadBooths().catch((e) => Front.setOut(String(e.message || e)));
 
