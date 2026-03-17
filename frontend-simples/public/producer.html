@@ -89,6 +89,9 @@
         <pre id="auditorsOut" class="out"></pre>
 
         <h2>Barracas do evento</h2>
+        <p class="muted">
+          Selecione um evento acima e use os botões para criar e visualizar barracas.
+        </p>
         <div class="row">
           <label class="field">
             <span>Expositor</span>
@@ -102,9 +105,10 @@
         </div>
         <div class="row">
           <button id="btnLoadBooths" class="secondary" style="max-width: 220px">
-            Listar barracas do evento
+            Atualizar lista de barracas
           </button>
         </div>
+        <div id="boothsDashboard" class="grid-booths"></div>
         <pre id="boothsOut" class="out"></pre>
       </section>
     </div>
@@ -112,6 +116,11 @@
     <script src="/app.js"></script>
     <script>
       (function () {
+        // Garante que o frontend simples use o mesmo host do backend
+        // utilizado pelo produtor-web, evitando problemas quando acessado
+        // de outros dispositivos na rede.
+        window.API_BASE = "http://192.168.0.33:3000";
+
         const s = Front.getSession();
         if (!s || s.role !== "producer" || !s.token) {
           window.location.href = "/";
@@ -289,6 +298,9 @@
             token: s.token,
           });
           const out = document.getElementById("boothsOut");
+          const dashboard = document.getElementById("boothsDashboard");
+
+          // Texto simples (debug / acessibilidade)
           if (out) {
             if (!data || data.length === 0) {
               out.textContent = "Nenhuma barraca cadastrada para este evento.";
@@ -297,10 +309,70 @@
               out.textContent = data
                 .map((b) => {
                   const link = `${baseUrl}/b/${b.id}`;
-                  return `• ${b.name} – Expositor: ${b.exhibitor_name || "?"}\n  Link NFC da barraca: ${link}`;
+                  return `• ${b.name} – Expositor: ${b.exhibitor_name || "?"} – Status: ${b.status || "?"}\n  Link NFC da barraca: ${link}`;
                 })
                 .join("\n\n");
             }
+          }
+
+          // Mini dashboard visual por barraca e status
+          if (dashboard) {
+            dashboard.innerHTML = "";
+
+            if (!data || data.length === 0) {
+              const empty = document.createElement("div");
+              empty.className = "empty-state";
+              empty.textContent = "Nenhuma barraca cadastrada para este evento.";
+              dashboard.appendChild(empty);
+              return;
+            }
+
+            data.forEach((b) => {
+              const card = document.createElement("div");
+
+              let statusClass = "status-ok";
+              let statusLabel = "OK";
+
+              const st = (b.status || "").toUpperCase();
+              if (st === "GREEN") { statusClass = "status-ok"; statusLabel = "OK"; }
+              else if (st === "YELLOW") { statusClass = "status-attention"; statusLabel = "Atenção"; }
+              else if (st === "RED") { statusClass = "status-delay"; statusLabel = "Atraso"; }
+              else if (st === "FINAL") { statusClass = "status-final"; statusLabel = "Finalizada"; }
+
+              card.className = `booth-card ${statusClass}`;
+
+              const title = document.createElement("div");
+              title.className = "booth-name";
+              title.textContent = b.name;
+
+              const exhibitor = document.createElement("div");
+              exhibitor.className = "booth-exhibitor";
+              exhibitor.textContent = "Expositor: " + (b.exhibitor_name || "?");
+
+              const status = document.createElement("div");
+              status.className = "booth-status";
+              status.textContent = "Status: " + statusLabel;
+
+              const actions = document.createElement("div");
+              actions.className = "row";
+
+              const openLinkBtn = document.createElement("button");
+              openLinkBtn.className = "btn-secondary btn-small";
+              openLinkBtn.textContent = "Abrir página da barraca";
+              openLinkBtn.onclick = () => {
+                const baseUrl = window.location.origin;
+                window.open(`${baseUrl}/b/${b.id}`, "_blank");
+              };
+
+              actions.appendChild(openLinkBtn);
+
+              card.appendChild(title);
+              card.appendChild(exhibitor);
+              card.appendChild(status);
+              card.appendChild(actions);
+
+              dashboard.appendChild(card);
+            });
           }
         }
 
