@@ -23,7 +23,7 @@
         <div class="row">
           <button id="btnCreateBoothMode">Criar barraca</button>
           <button id="btnPendingAuditsMode" class="secondary">
-            Ver barracas pendentes
+            Ver fila de barracas
           </button>
         </div>
       </section>
@@ -31,21 +31,9 @@
       <section class="card" id="createBoothSection">
         <h2>Criar barraca</h2>
         <p class="muted">
-          Selecione o evento e o expositor para criar uma nova barraca.
+          Informe os dados básicos para criar uma nova barraca no evento atual.
         </p>
-
-        <div class="row">
-          <label class="field">
-            <span>Evento</span>
-          </label>
-        </div>
-
-        <div class="row">
-          <label class="field">
-            <span>Expositor</span>
-            <select id="boothExhibitor"></select>
-          </label>
-        </div>
+        <p class="muted" id="auditorEventInfo"></p>
 
         <div class="row">
           <label class="field">
@@ -59,26 +47,17 @@
       </section>
 
       <section class="card" id="pendingSection">
-        <h2>Barracas pendentes</h2>
+        <h2>Fila de barracas para auditoria</h2>
         <p class="muted">
-          Lista de barracas do evento selecionado, separadas por status.
+          Barracas organizadas por urgência, de acordo com o status calculado pelo sistema.
         </p>
 
-        <div class="row">
-          <label class="field">
-            <span>Evento</span>
-            <select id="eventSelectPending"></select>
-          </label>
-          <button id="btnLoadBooths" class="secondary" style="max-width: 220px">
-            Carregar barracas
-          </button>
-        </div>
-
+        <div id="boothsQueue" class="grid-booths"></div>
         <pre id="pendingOut" class="out"></pre>
       </section>
 
       <section class="card" id="auditSection" style="display: none">
-        <h2 id="auditTitle">Audição da barraca</h2>
+        <h2 id="auditTitle">Auditoria da barraca</h2>
         <p class="muted" id="auditSubtitle"></p>
 
         <div class="grid single">
@@ -123,6 +102,43 @@
         const createBoothSection = document.getElementById("createBoothSection");
         const pendingSection = document.getElementById("pendingSection");
         const auditSection = document.getElementById("auditSection");
+        const boothsQueue = document.getElementById("boothsQueue");
+
+        let currentBooth = null;
+        let currentEvent = null;
+        async function initEventsForAuditor() {
+          try {
+            const events = await Front.api("/auditors/me/events", { token: s.token });
+            const info = document.getElementById("auditorEventInfo");
+
+            if (!Array.isArray(events) || events.length === 0) {
+              currentEvent = null;
+              if (info) {
+                info.textContent =
+                  "Você não está associado a nenhum evento ativo. Peça ao produtor para vincular você a um evento.";
+              }
+              return;
+            }
+
+            if (events.length === 1) {
+              currentEvent = events[0];
+              if (info) {
+                info.textContent = `Evento atual: ${currentEvent.name}`;
+              }
+            } else {
+              currentEvent = events[0];
+              if (info) {
+                info.textContent =
+                  "Você está associado a vários eventos ativos. Por enquanto, usando o mais recente: " +
+                  currentEvent.name;
+              }
+            }
+          } catch (e) {
+            const info = document.getElementById("auditorEventInfo");
+            if (info) info.textContent = String(e.message || e);
+          }
+        }
+
 
         function showSection(section) {
           if (createBoothSection) createBoothSection.style.display = section === "create" ? "" : "none";
@@ -143,8 +159,136 @@
           showSection("pending");
         };
 
+        document.getElementById("btnCreateBooth").onclick = async () => {
+          try {
+            const exhibitorId = ""; // placeholder: expositor será definido via fluxo do produtor
+            const name = (document.getElementById("boothName").value || "").trim();
+            const outCreate = document.getElementById("createBoothOut");
+
+            if (!currentEvent) {
+              if (outCreate)
+                outCreate.textContent =
+                  "Nenhum evento ativo definido para este auditor. Peça ao produtor para vincular você a um evento.";
+              return;
+            }
+
+            if (!name) {
+              if (outCreate) outCreate.textContent = "Informe o nome da barraca.";
+              return;
+            }
+
+            if (outCreate) outCreate.textContent = "Criando barraca...";
+
+            const data = await Front.api("/opening", {
+              method: "POST",
+              token: s.token,
+              json: {
+                event_id: currentEvent.id,
+                exhibitor_id: exhibitorId || null,
+                booth_name: name,
+              },
+            });
+
+            if (outCreate) {
+              outCreate.textContent =
+                "Barraca criada com sucesso.\n" +
+                JSON.stringify(data, null, 2);
+            }
+          } catch (e) {
+            const outCreate = document.getElementById("createBoothOut");
+            if (outCreate) outCreate.textContent = String(e.message || e);
+          }
+        };
+
+        async function loadQueue() {
+          try {
+            setOut("Carregando fila de barracas...");
+            const data = await Front.api("/events/dashboard", { token: s.token });
+
+            if (!Array.isArray(data) || data.length === 0) {
+              if (boothsQueue) boothsQueue.innerHTML = "";
+              setOut("Nenhuma barraca na fila.");
+              return;
+            }
+
+            // Ordena priorizando vermelho, amarelo, verde
+            const orderMap = { RED: 0, YELLOW: 1, GREEN: 2, FINAL: 3 };
+            data.sort((a, b) => {
+              const sa = orderMap[a.status] ?? 99;
+              const sb = orderMap[b.status] ?? 99;
+              return sa - sb;
+            });
+
+            if (boothsQueue) {
+              boothsQueue.innerHTML = "";
+              data.forEach((b) => {
+                const card = document.createElement("div");
+                let statusClass = "status-ok";
+                let statusLabel = "OK";
+                const st = (b.status || "").toUpperCase();
+                if (st === "YELLOW") {
+                  statusClass = "status-attention";
+                  statusLabel = "Atenção";
+                } else if (st === "RED") {
+                  statusClass = "status-delay";
+                  statusLabel = "Atraso";
+                } else if (st === "FINAL") {
+                  statusClass = "status-final";
+                  statusLabel = "Finalizada";
+                }
+
+                card.className = `booth-card ${statusClass}`;
+
+                const title = document.createElement("div");
+                title.className = "booth-name";
+                title.textContent = b.name || "Barraca";
+
+                const info = document.createElement("div");
+                info.className = "booth-exhibitor";
+                info.textContent = `Status: ${statusLabel}`;
+
+                const actions = document.createElement("div");
+                actions.className = "row";
+
+                const btnAudit = document.createElement("button");
+                btnAudit.className = "btn-small";
+                btnAudit.textContent = "Auditar";
+                btnAudit.onclick = () => openAudit(b);
+
+                actions.appendChild(btnAudit);
+
+                card.appendChild(title);
+                card.appendChild(info);
+                card.appendChild(actions);
+
+                boothsQueue.appendChild(card);
+              });
+            }
+
+            setOut("");
+          } catch (e) {
+            setOut(String(e.message || e));
+          }
+        }
+
+        function openAudit(booth) {
+          currentBooth = booth;
+          if (!booth) return;
+          const titleEl = document.getElementById("auditTitle");
+          const subEl = document.getElementById("auditSubtitle");
+          if (titleEl) titleEl.textContent = `Auditoria da barraca: ${booth.name || ""}`;
+          if (subEl) subEl.textContent = `Status atual: ${booth.status || "?"}`;
+          showSection("audit");
+          setOut("");
+        }
+
         document.getElementById("btnSendAudit").onclick = async () => {
           try {
+            if (!currentBooth || !currentBooth.id) {
+              setOut("Nenhuma barraca selecionada para auditoria.");
+              return;
+            }
+
             const valueMachine = parseFloat(
               document.getElementById("valueMachine").value || "0",
             );
@@ -154,11 +298,10 @@
             const files = document.getElementById("photos").files || [];
 
             const hasValue =
-              (Number.isFinite(valueMachine) && valueMachine > 0) ||
-              (Number.isFinite(valueCash) && valueCash > 0);
-            const hasPhoto = files.length > 0;
+              (Number.isFinite(valueMachine) && valueMachine >= 0) ||
+              (Number.isFinite(valueCash) && valueCash >= 0);
 
-            if (!hasValue && !hasPhoto) {
+            if (!hasValue && files.length === 0) {
               setOut(
                 "Informe ao menos um valor (cartão ou dinheiro) ou envie ao menos uma foto.",
               );
@@ -168,30 +311,39 @@
             setOut("Enviando auditoria...");
 
             const formData = new FormData();
-            if (Number.isFinite(valueMachine) && valueMachine > 0) {
-              formData.append("value_machine", String(valueMachine));
-            }
-            if (Number.isFinite(valueCash) && valueCash > 0) {
-              formData.append("value_cash", String(valueCash));
-            }
+            formData.append("booth_id", currentBooth.id);
+            formData.append(
+              "value_machine",
+              Number.isFinite(valueMachine) ? String(valueMachine) : "0",
+            );
+            formData.append(
+              "value_cash",
+              Number.isFinite(valueCash) ? String(valueCash) : "0",
+            );
             for (let i = 0; i < Math.min(files.length, 4); i++) {
               formData.append("photos", files[i]);
             }
 
-            await Front.api("/audits", {
+            await Front.api("/periodic", {
               method: "POST",
               token: s.token,
               formData,
             });
 
             setOut("Auditoria enviada com sucesso.");
+            // Volta para a fila atualizada
+            showSection("pending");
+            await loadQueue();
           } catch (e) {
             setOut(String(e.message || e));
           }
         };
 
-        // Inicialmente, mostra painel de criação de barraca
+        // Inicialmente, tenta associar o auditor a um evento e carrega a fila
         showSection("create");
+        initEventsForAuditor()
+          .then(() => loadQueue())
+          .catch((e) => setOut(String(e.message || e)));
       })();
     </script>
   </body>

@@ -129,9 +129,9 @@
     </div>
 
     <script>
-      // Mantém o mesmo backend usado quando tudo estava funcionando
-      // (mesma base do frontend produtor-web).
-      window.API_BASE = "http://192.168.0.33:3000";
+      // Backend oficial para o frontend simples (não alterar sem combinar):
+      // API do novo sistema NFC rodando em localhost:3000
+      window.API_BASE = "http://localhost:3000";
     </script>
     <script src="/app.js"></script>
     <script>
@@ -266,11 +266,25 @@
         }
 
         async function loadAuditors() {
-          const data = await Front.api("/auditors", { token: s.token });
+          const selEvent = document.getElementById("eventSelect");
+          const eventId = selEvent && selEvent.value;
           const out = document.getElementById("auditorsOut");
+
+          if (!eventId) {
+            if (out)
+              out.textContent =
+                "Selecione um evento para ver e vincular auditores.";
+            return;
+          }
+
+          const data = await Front.api(`/auditors/events/${eventId}`, {
+            token: s.token,
+          });
+
           if (out) {
             if (!data || data.length === 0) {
-              out.textContent = "Nenhum auditor cadastrado para este produtor.";
+              out.textContent =
+                "Nenhum auditor cadastrado para este produtor.\nCrie auditores acima e depois vincule-os ao evento.";
             } else {
               const baseUrl = window.location.origin;
               out.textContent = data
@@ -278,11 +292,36 @@
                   const link = `${baseUrl}/?login=auditor:${encodeURIComponent(
                     a.nfc_uid || "",
                   )}`;
-                  return `• ${a.name} (${a.nfc_uid})\n  NFC link: ${link}`;
+                  const statusVinculo = a.linked
+                    ? "VINCULADO a este evento"
+                    : "não vinculado";
+                  return `• ${a.name} (${a.nfc_uid}) – ${statusVinculo}\n  NFC link: ${link}`;
                 })
                 .join("\n\n");
             }
           }
+        }
+
+        async function attachAuditorToEvent(auditorId) {
+          const selEvent = document.getElementById("eventSelect");
+          const eventId = selEvent && selEvent.value;
+          if (!eventId) {
+            Front.setOut("Selecione um evento.");
+            return;
+          }
+
+          await Front.api(`/auditors/events/${eventId}`, {
+            method: "POST",
+            token: s.token,
+            json: { auditor_id: auditorId },
+          });
+
+          await loadAuditors();
+        }*** End Patch```}"/>
+      </tool>
+    </tool_call>
+  </tool_calls>
+</assistant_tools>```**
         }
 
         async function createAuditor() {
