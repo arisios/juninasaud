@@ -14,6 +14,7 @@ const eventDashboardRoutes = require('./routes/eventDashboard');
 const nfcRoutes = require('./routes/nfc');
 const withdrawalsRoutes = require('./routes/withdrawals');
 const boothPageRoutes = require('./routes/boothPage');
+const auditRequestsRoutes = require('./routes/auditRequests');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/periodic', periodicRoutes);
 app.use('/final', finalRoutes);
 app.use('/events', eventBoothsRoutes);
 app.use('/events', eventDashboardRoutes);
+app.use('/audit-requests', auditRequestsRoutes);
 app.use('/nfc', nfcRoutes);
 app.use('/withdrawals', withdrawalsRoutes);
 

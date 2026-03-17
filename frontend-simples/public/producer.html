@@ -90,7 +90,8 @@
 
         <h2>Barracas do evento</h2>
         <p class="muted">
-          Selecione um evento acima e use os botões para criar e visualizar barracas.
+          Selecione um evento acima e use os botões para criar novas barracas
+          ou abrir a lista completa de barracas do evento.
         </p>
         <div class="row">
           <label class="field">
@@ -104,8 +105,22 @@
           <button id="btnCreateBooth" style="max-width: 220px">Criar barraca</button>
         </div>
         <div class="row">
-          <button id="btnLoadBooths" class="secondary" style="max-width: 220px">
-            Atualizar lista de barracas
+          <button id="btnOpenBoothsScreen" class="secondary" style="max-width: 220px">
+            Ver lista de barracas
+          </button>
+        </div>
+      </section>
+
+      <section class="card" id="boothsScreen" style="display: none">
+        <h2>Lista de barracas do evento</h2>
+        <p class="muted">
+          Esta tela mostra todas as barracas do evento selecionado, com o status
+          calculado pelo backend.
+        </p>
+        <div class="row">
+          <button id="btnBackFromBooths" style="max-width: 160px">Voltar</button>
+          <button id="btnRefreshBooths" class="secondary" style="max-width: 200px">
+            Atualizar lista
           </button>
         </div>
         <div id="boothsDashboard" class="grid-booths"></div>
@@ -113,6 +128,11 @@
       </section>
     </div>
 
+    <script>
+      // Mantém o mesmo backend usado quando tudo estava funcionando
+      // (mesma base do frontend produtor-web).
+      window.API_BASE = "http://192.168.0.33:3000";
+    </script>
     <script src="/app.js"></script>
     <script>
       (function () {
@@ -295,16 +315,15 @@
           const out = document.getElementById("boothsOut");
           const dashboard = document.getElementById("boothsDashboard");
 
-          // Texto simples (debug / acessibilidade)
+          // Texto simples (debug / acessibilidade) – sem mais o link NFC aqui,
+          // o link oficial fica apenas dentro da página da barraca (/b/:id).
           if (out) {
             if (!data || data.length === 0) {
               out.textContent = "Nenhuma barraca cadastrada para este evento.";
             } else {
-              const baseUrl = window.location.origin;
               out.textContent = data
                 .map((b) => {
-                  const link = `${baseUrl}/b/${b.id}`;
-                  return `• ${b.name} – Expositor: ${b.exhibitor_name || "?"} – Status: ${b.status || "?"}\n  Link NFC da barraca: ${link}`;
+                  return `• ${b.name} – Expositor: ${b.exhibitor_name || "?"} – Status: ${b.status || "?"}`;
                 })
                 .join("\n\n");
             }
@@ -355,7 +374,7 @@
               openLinkBtn.className = "btn-secondary btn-small";
               openLinkBtn.textContent = "Abrir página da barraca";
               openLinkBtn.onclick = () => {
-                const baseUrl = window.location.origin;
+                const baseUrl = window.API_BASE || window.location.origin;
                 window.open(`${baseUrl}/b/${b.id}`, "_blank");
               };
 
@@ -415,6 +434,17 @@
         const auditSection = document.getElementById("auditSection");
         if (auditSection) auditSection.style.display = "none";
 
+        function showBoothsScreen() {
+          const boothsScreen = document.getElementById("boothsScreen");
+          if (boothsScreen) boothsScreen.style.display = "";
+          if (auditSection) auditSection.style.display = "none";
+        }
+
+        async function showBoothsScreenAndLoad() {
+          showBoothsScreen();
+          await loadBooths();
+        }
+
         document.getElementById("btnAuditSystem").onclick = () => {
           if (auditSection) auditSection.style.display = "";
           loadExhibitors().catch(() => {});
@@ -440,8 +470,25 @@
           createAuditor().catch((e) => Front.setOut(String(e.message || e)));
         document.getElementById("btnCreateBooth").onclick = () =>
           createBooth().catch((e) => Front.setOut(String(e.message || e)));
-        document.getElementById("btnLoadBooths").onclick = () =>
-          loadBooths().catch((e) => Front.setOut(String(e.message || e)));
+        document.getElementById("btnOpenBoothsScreen").onclick = () =>
+          showBoothsScreenAndLoad().catch((e) =>
+            Front.setOut(String(e.message || e)),
+          );
+
+        const btnBackFromBooths = document.getElementById("btnBackFromBooths");
+        if (btnBackFromBooths) {
+          btnBackFromBooths.onclick = () => {
+            const boothsScreen = document.getElementById("boothsScreen");
+            if (boothsScreen) boothsScreen.style.display = "none";
+            if (auditSection) auditSection.style.display = "";
+          };
+        }
+
+        const btnRefreshBooths = document.getElementById("btnRefreshBooths");
+        if (btnRefreshBooths) {
+          btnRefreshBooths.onclick = () =>
+            loadBooths().catch((e) => Front.setOut(String(e.message || e)));
+        }
 
         loadEvents().catch((e) => Front.setOut(String(e.message || e)));
       })();
