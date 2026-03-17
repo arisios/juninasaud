@@ -116,11 +116,6 @@
     <script src="/app.js"></script>
     <script>
       (function () {
-        // Garante que o frontend simples use o mesmo host do backend
-        // utilizado pelo produtor-web, evitando problemas quando acessado
-        // de outros dispositivos na rede.
-        window.API_BASE = "http://192.168.0.33:3000";
-
         const s = Front.getSession();
         if (!s || s.role !== "producer" || !s.token) {
           window.location.href = "/";

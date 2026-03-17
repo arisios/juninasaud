@@ -57,6 +57,77 @@ h1 {
   margin-right: auto;
 }
 
+/* Mini dashboard de barracas no painel do produtor */
+.grid-booths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.booth-card {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.booth-name {
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.booth-exhibitor,
+.booth-status {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.status-ok {
+  border-left: 3px solid #22c55e;
+}
+
+.status-attention {
+  border-left: 3px solid #eab308;
+}
+
+.status-delay {
+  border-left: 3px solid #f97316;
+}
+
+.status-final {
+  border-left: 3px solid #6b7280;
+  opacity: 0.8;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  color: #e5e7eb;
+  box-shadow: none;
+}
+
+.btn-secondary:hover {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+.empty-state {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  font-size: 0.85rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
