@@ -11,6 +11,7 @@
       <header class="header">
         <div>
           <h1>Painel do Auditor</h1>
+          <p class="muted">Criar barracas e ver auditorias pendentes.</p>
         </div>
         <div class="right">
           <button id="btnLogout">Sair</button>
@@ -18,10 +19,67 @@
       </header>
 
       <section class="card">
-        <h2>Auditoria da barraca</h2>
+        <h2>Ações</h2>
+        <div class="row">
+          <button id="btnCreateBoothMode">Criar barraca</button>
+          <button id="btnPendingAuditsMode" class="secondary">
+            Ver barracas pendentes
+          </button>
+        </div>
+      </section>
+
+      <section class="card" id="createBoothSection">
+        <h2>Criar barraca</h2>
         <p class="muted">
-          Preencha os valores e envie pelo menos um valor ou uma foto.
+          Selecione o evento e o expositor para criar uma nova barraca.
         </p>
+
+        <div class="row">
+          <label class="field">
+            <span>Evento</span>
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span>Expositor</span>
+            <select id="boothExhibitor"></select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span>Nome da barraca</span>
+            <input id="boothName" placeholder="Nome da barraca" />
+          </label>
+          <button id="btnCreateBooth" style="max-width: 220px">Criar barraca</button>
+        </div>
+
+        <pre id="createBoothOut" class="out"></pre>
+      </section>
+
+      <section class="card" id="pendingSection">
+        <h2>Barracas pendentes</h2>
+        <p class="muted">
+          Lista de barracas do evento selecionado, separadas por status.
+        </p>
+
+        <div class="row">
+          <label class="field">
+            <span>Evento</span>
+            <select id="eventSelectPending"></select>
+          </label>
+          <button id="btnLoadBooths" class="secondary" style="max-width: 220px">
+            Carregar barracas
+          </button>
+        </div>
+
+        <pre id="pendingOut" class="out"></pre>
+      </section>
+
+      <section class="card" id="auditSection" style="display: none">
+        <h2 id="auditTitle">Audição da barraca</h2>
+        <p class="muted" id="auditSubtitle"></p>
 
         <div class="grid single">
           <label class="field">
@@ -62,9 +120,27 @@
           if (out) out.textContent = msg || "";
         }
 
+        const createBoothSection = document.getElementById("createBoothSection");
+        const pendingSection = document.getElementById("pendingSection");
+        const auditSection = document.getElementById("auditSection");
+
+        function showSection(section) {
+          if (createBoothSection) createBoothSection.style.display = section === "create" ? "" : "none";
+          if (pendingSection) pendingSection.style.display = section === "pending" ? "" : "none";
+          if (auditSection) auditSection.style.display = section === "audit" ? "" : "none";
+        }
+
         document.getElementById("btnLogout").onclick = () => {
           Front.clearSession();
           window.location.href = "/";
+        };
+
+        document.getElementById("btnCreateBoothMode").onclick = () => {
+          showSection("create");
+        };
+
+        document.getElementById("btnPendingAuditsMode").onclick = () => {
+          showSection("pending");
         };
 
         document.getElementById("btnSendAudit").onclick = async () => {
@@ -102,8 +178,6 @@
               formData.append("photos", files[i]);
             }
 
-            // Aqui estamos assumindo que o backend já sabe booth_id/audit_type
-            // a partir do token ou da rota; se precisar, depois refinamos essa rota.
             await Front.api("/audits", {
               method: "POST",
               token: s.token,
@@ -115,6 +189,9 @@
             setOut(String(e.message || e));
           }
         };
+
+        // Inicialmente, mostra painel de criação de barraca
+        showSection("create");
       })();
     </script>
   </body>
